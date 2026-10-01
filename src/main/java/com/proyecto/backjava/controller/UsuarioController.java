@@ -1,7 +1,8 @@
 package com.proyecto.backjava.controller;
 
 import com.proyecto.backjava.dto.UsuarioCreateRequest;
-import com.proyecto.backjava.dto.UsuarioResponse;
+import com.proyecto.backjava.dto.UsuarioConsultaDto;
+import com.proyecto.backjava.dto.UsuarioUpdateRequest;
 import com.proyecto.backjava.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,13 +20,26 @@ public class UsuarioController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<List<UsuarioResponse>> listar() {
+    public ResponseEntity<List<UsuarioConsultaDto>> listar() {
         return ResponseEntity.ok(userService.listar());
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<UsuarioConsultaDto> consultar(@PathVariable String id) {
+        return ResponseEntity.ok(userService.consultar(id));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody UsuarioCreateRequest request) {
+    public ResponseEntity<UsuarioConsultaDto> crear(@Valid @RequestBody UsuarioCreateRequest request) {
         return ResponseEntity.ok(userService.crear(request));
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<UsuarioConsultaDto> actualizar(@PathVariable String id,
+                                                          @Valid @RequestBody UsuarioUpdateRequest request) {
+        return ResponseEntity.ok(userService.actualizar(id, request));
     }
 }

@@ -1,5 +1,6 @@
 package com.proyecto.backjava.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,11 +30,13 @@ public class Archivo {
     @Column(name = "TIPO", length = 100)
     private String tipo;
 
+    @JsonProperty("createdAt")
     @Column(name = "CREATED_AT", nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 
+    @JsonProperty("updatedAt")
     @Column(name = "UPDATED_AT")
-    private LocalDateTime updatedAt;
+    private LocalDateTime fechaActualizacion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CORRESPONDENCIA_ID", referencedColumnName = "ID", insertable = false, updatable = false)
@@ -41,12 +44,12 @@ public class Archivo {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+        fechaCreacion = LocalDateTime.now();
+        fechaActualizacion = fechaCreacion;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        fechaActualizacion = LocalDateTime.now();
     }
 }

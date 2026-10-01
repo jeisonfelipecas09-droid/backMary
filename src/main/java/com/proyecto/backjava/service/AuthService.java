@@ -2,7 +2,7 @@ package com.proyecto.backjava.service;
 
 import com.proyecto.backjava.dto.AuthResponse;
 import com.proyecto.backjava.dto.LoginRequest;
-import com.proyecto.backjava.dto.UsuarioResponse;
+import com.proyecto.backjava.dto.UsuarioConsultaDto;
 import com.proyecto.backjava.entity.User;
 import com.proyecto.backjava.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +19,10 @@ public class AuthService {
     private final JwtService jwtService;
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
+        User user = userRepository.findByCorreoElectronico(request.getEmail().trim().toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos"));
 
-        if (!Boolean.TRUE.equals(user.getActivo()) || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        if (!user.isEnabled() || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos");
         }
 
@@ -30,19 +30,21 @@ public class AuthService {
         return new AuthResponse(token, mapToResponse(user));
     }
 
-    public UsuarioResponse me(User user) {
+    public UsuarioConsultaDto me(User user) {
         return mapToResponse(user);
     }
 
-    private UsuarioResponse mapToResponse(User user) {
-        return UsuarioResponse.builder()
+    private UsuarioConsultaDto mapToResponse(User user) {
+        return UsuarioConsultaDto.builder()
                 .id(user.getId())
                 .nombre(user.getNombre())
                 .apellidos(user.getApellidos())
-                .email(user.getEmail())
+                .email(user.getCorreoElectronico())
                 .telefono(user.getTelefono())
                 .rol(user.getRol())
-                .activo(user.getActivo())
+                .estado(user.getEstado())
+                .fechaCreacion(user.getFechaCreacion())
+                .fechaActualizacion(user.getFechaActualizacion())
                 .build();
     }
 }

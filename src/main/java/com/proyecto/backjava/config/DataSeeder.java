@@ -1,6 +1,7 @@
 package com.proyecto.backjava.config;
 
 import com.proyecto.backjava.constants.Roles;
+import com.proyecto.backjava.entity.EstadoUsuario;
 import com.proyecto.backjava.entity.User;
 import com.proyecto.backjava.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,32 +24,21 @@ public class DataSeeder implements CommandLineRunner {
                     .id(UUID.randomUUID().toString())
                     .nombre("Administrador")
                     .apellidos("General")
-                    .email("admin@correspondencia.local")
-                    .passwordHash(passwordEncoder.encode("Admin123*"))
+                    .correoElectronico("admin@correspondencia.local")
+                    .password(passwordEncoder.encode("Admin123*"))
                     .rol(Roles.ADMINISTRADOR)
-                    .activo(true)
+                    .estado(EstadoUsuario.ACTIVO)
                     .build();
             userRepository.save(admin);
-
-            User correspondencia = User.builder()
-                    .id(UUID.randomUUID().toString())
-                    .nombre("Usuario")
-                    .apellidos("Correspondencia")
-                    .email("correspondencia@correspondencia.local")
-                    .passwordHash(passwordEncoder.encode("Admin123*"))
-                    .rol(Roles.CORRESPONDENCIA)
-                    .activo(true)
-                    .build();
-            userRepository.save(correspondencia);
 
             User usuario = User.builder()
                     .id(UUID.randomUUID().toString())
                     .nombre("Usuario")
                     .apellidos("Operativo")
-                    .email("usuario@correspondencia.local")
-                    .passwordHash(passwordEncoder.encode("Admin123*"))
+                    .correoElectronico("usuario@correspondencia.local")
+                    .password(passwordEncoder.encode("Admin123*"))
                     .rol(Roles.USUARIO)
-                    .activo(true)
+                    .estado(EstadoUsuario.ACTIVO)
                     .build();
             userRepository.save(usuario);
         }

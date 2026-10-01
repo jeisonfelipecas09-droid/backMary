@@ -2,6 +2,7 @@ package com.proyecto.backjava.controller;
 
 import com.proyecto.backjava.dto.AuthResponse;
 import com.proyecto.backjava.dto.LoginRequest;
+import com.proyecto.backjava.dto.UsuarioConsultaDto;
 import com.proyecto.backjava.entity.User;
 import com.proyecto.backjava.service.AuthService;
 import jakarta.validation.Valid;
@@ -26,7 +27,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<User> me(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(user);
+    public ResponseEntity<UsuarioConsultaDto> me(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(authService.me(user));
     }
 }

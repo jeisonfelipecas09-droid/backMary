@@ -1,9 +1,11 @@
 package com.proyecto.backjava.controller;
 
+import com.proyecto.backjava.dto.CorrespondenciaActualizarRequest;
+import com.proyecto.backjava.dto.CorrespondenciaConsultaDto;
 import com.proyecto.backjava.dto.CorrespondenciaCreateRequest;
+import com.proyecto.backjava.dto.HistorialConsultaDto;
+import com.proyecto.backjava.dto.TransferenciaConsultaDto;
 import com.proyecto.backjava.dto.TransferenciaRequest;
-import com.proyecto.backjava.entity.Correspondencia;
-import com.proyecto.backjava.entity.HistorialEvento;
 import com.proyecto.backjava.entity.User;
 import com.proyecto.backjava.service.CorrespondenciaService;
 import jakarta.validation.Valid;
@@ -22,32 +24,62 @@ public class CorrespondenciaController {
     private final CorrespondenciaService correspondenciaService;
 
     @PostMapping("/correspondencias")
-    public ResponseEntity<Correspondencia> crear(@AuthenticationPrincipal User usuario,
-                                                 @Valid @RequestBody CorrespondenciaCreateRequest request) {
+    public ResponseEntity<CorrespondenciaConsultaDto> crear(@AuthenticationPrincipal User usuario,
+                                                             @Valid @RequestBody CorrespondenciaCreateRequest request) {
         return ResponseEntity.ok(correspondenciaService.crear(usuario, request));
     }
 
+    @GetMapping("/correspondencias/{id}")
+    public ResponseEntity<CorrespondenciaConsultaDto> consultar(@PathVariable String id,
+                                                                 @AuthenticationPrincipal User usuario) {
+        return ResponseEntity.ok(correspondenciaService.consultar(id, usuario));
+    }
+
+    @PatchMapping("/correspondencias/{id}")
+    public ResponseEntity<CorrespondenciaConsultaDto> actualizar(@PathVariable String id,
+                                                                 @AuthenticationPrincipal User usuario,
+                                                                 @Valid @RequestBody CorrespondenciaActualizarRequest request) {
+        return ResponseEntity.ok(correspondenciaService.actualizar(id, request, usuario));
+    }
+
     @GetMapping("/inventario")
-    public ResponseEntity<List<Correspondencia>> inventario(@AuthenticationPrincipal User usuario) {
+    public ResponseEntity<List<CorrespondenciaConsultaDto>> inventario(@AuthenticationPrincipal User usuario) {
         return ResponseEntity.ok(correspondenciaService.inventario(usuario));
     }
 
     @PatchMapping("/inventario/{id}/recibir")
-    public ResponseEntity<Correspondencia> recibir(@PathVariable String id,
-                                                  @AuthenticationPrincipal User usuario) {
+    public ResponseEntity<CorrespondenciaConsultaDto> recibir(@PathVariable String id,
+                                                              @AuthenticationPrincipal User usuario) {
         return ResponseEntity.ok(correspondenciaService.recibir(id, usuario));
     }
 
     @PostMapping("/inventario/{id}/transferir")
-    public ResponseEntity<Correspondencia> transferir(@PathVariable String id,
-                                                    @AuthenticationPrincipal User usuario,
-                                                    @Valid @RequestBody TransferenciaRequest request) {
+    public ResponseEntity<CorrespondenciaConsultaDto> transferir(@PathVariable String id,
+                                                                 @AuthenticationPrincipal User usuario,
+                                                                 @Valid @RequestBody TransferenciaRequest request) {
         return ResponseEntity.ok(correspondenciaService.transferir(id, usuario, request));
     }
 
     @GetMapping("/historial")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR','CORRESPONDENCIA','USUARIO')")
-    public ResponseEntity<List<HistorialEvento>> historial(@AuthenticationPrincipal User usuario) {
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','USUARIO')")
+    public ResponseEntity<List<HistorialConsultaDto>> historial(@AuthenticationPrincipal User usuario) {
         return ResponseEntity.ok(correspondenciaService.historial(usuario));
+    }
+
+    @GetMapping("/historial/{id}")
+    public ResponseEntity<HistorialConsultaDto> consultarEvento(@PathVariable String id,
+                                                                @AuthenticationPrincipal User usuario) {
+        return ResponseEntity.ok(correspondenciaService.consultarEvento(id, usuario));
+    }
+
+    @GetMapping("/transferencias")
+    public ResponseEntity<List<TransferenciaConsultaDto>> transferencias(@AuthenticationPrincipal User usuario) {
+        return ResponseEntity.ok(correspondenciaService.transferencias(usuario));
+    }
+
+    @GetMapping("/transferencias/{id}")
+    public ResponseEntity<TransferenciaConsultaDto> consultarTransferencia(@PathVariable String id,
+                                                                          @AuthenticationPrincipal User usuario) {
+        return ResponseEntity.ok(correspondenciaService.consultarTransferencia(id, usuario));
     }
 }

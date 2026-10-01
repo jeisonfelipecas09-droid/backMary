@@ -1,5 +1,7 @@
 package com.proyecto.backjava.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -29,26 +31,31 @@ public class User implements UserDetails {
     @Column(name = "APELLIDOS", length = 120, nullable = false)
     private String apellidos;
 
+    @JsonProperty("email")
     @Column(name = "EMAIL", length = 160, nullable = false, unique = true)
-    private String email;
+    private String correoElectronico;
 
     @Column(name = "TELEFONO", length = 30)
     private String telefono;
 
-    @Column(name = "PASSWORD_HASH", nullable = false)
-    private String passwordHash;
+    @Column(name = "CONTRASEÑA", nullable = false)
+    @JsonIgnore
+    private String password;
 
     @Column(name = "ROL", length = 30, nullable = false)
     private String rol;
 
-    @Column(name = "ACTIVO", nullable = false)
-    private Boolean activo = true;
+    @Convert(converter = EstadoUsuarioConverter.class)
+    @Column(name = "ESTADO", nullable = false, precision = 1, scale = 0)
+    private EstadoUsuario estado = EstadoUsuario.ACTIVO;
 
+    @JsonProperty("createdAt")
     @Column(name = "CREATED_AT", nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 
+    @JsonProperty("updatedAt")
     @Column(name = "UPDATED_AT")
-    private LocalDateTime updatedAt;
+    private LocalDateTime fechaActualizacion;
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Recorrido> recorridos = new ArrayList<>();
@@ -73,18 +80,19 @@ public class User implements UserDetails {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+        fechaCreacion = LocalDateTime.now();
+        fechaActualizacion = fechaCreacion;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        fechaActualizacion = LocalDateTime.now();
     }
 
     @Override
+    @JsonIgnore
     public String getPassword() {
-        return passwordHash;
+        return password;
     }
 
     @Override
@@ -94,7 +102,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return correoElectronico;
     }
 
     @Override
@@ -114,6 +122,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return Boolean.TRUE.equals(activo);
+        return estado == EstadoUsuario.ACTIVO;
     }
 }

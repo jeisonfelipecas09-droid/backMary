@@ -2,8 +2,10 @@ package com.proyecto.backjava.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import com.proyecto.backjava.entity.EstadoUsuario;
 
 @Data
 public class UsuarioCreateRequest {
@@ -29,5 +31,6 @@ public class UsuarioCreateRequest {
     @NotBlank
     private String rol;
 
-    private Boolean activo = true;
+    @NotNull
+    private EstadoUsuario estado = EstadoUsuario.ACTIVO;
 }

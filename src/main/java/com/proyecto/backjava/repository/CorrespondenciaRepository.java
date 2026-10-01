@@ -12,5 +12,8 @@ public interface CorrespondenciaRepository extends JpaRepository<Correspondencia
     Optional<Correspondencia> findById(String id);
 
     @EntityGraph(attributePaths = {"recorrido", "creadoPor", "usuarioAsignado", "recibidaPor", "archivos"})
-    List<Correspondencia> findAllByOrderByCreatedAtDesc();
+    List<Correspondencia> findAllByOrderByFechaCreacionDesc();
+
+    @EntityGraph(attributePaths = {"recorrido", "creadoPor", "usuarioAsignado", "recibidaPor", "archivos"})
+    List<Correspondencia> findAllByUsuarioAsignadoIdOrderByFechaCreacionDesc(String usuarioAsignadoId);
 }

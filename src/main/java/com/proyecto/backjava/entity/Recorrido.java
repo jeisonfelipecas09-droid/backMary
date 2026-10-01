@@ -1,5 +1,6 @@
 package com.proyecto.backjava.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -34,11 +35,13 @@ public class Recorrido {
     @Column(name = "MODALIDAD", length = 120, nullable = false)
     private String modalidad;
 
+    @JsonProperty("createdAt")
     @Column(name = "CREATED_AT", nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 
+    @JsonProperty("updatedAt")
     @Column(name = "UPDATED_AT")
-    private LocalDateTime updatedAt;
+    private LocalDateTime fechaActualizacion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USUARIO_ID", referencedColumnName = "ID", insertable = false, updatable = false)
@@ -60,12 +63,12 @@ public class Recorrido {
         if (fecha == null) {
             fecha = LocalDateTime.now();
         }
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+        fechaCreacion = LocalDateTime.now();
+        fechaActualizacion = fechaCreacion;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        fechaActualizacion = LocalDateTime.now();
     }
 }

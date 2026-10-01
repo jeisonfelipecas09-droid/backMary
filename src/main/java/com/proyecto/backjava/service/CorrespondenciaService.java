@@ -2,7 +2,12 @@ package com.proyecto.backjava.service;
 
 import com.proyecto.backjava.constants.EstadosCorrespondencia;
 import com.proyecto.backjava.constants.Roles;
+import com.proyecto.backjava.dto.ArchivoConsultaDto;
+import com.proyecto.backjava.dto.CorrespondenciaActualizarRequest;
+import com.proyecto.backjava.dto.CorrespondenciaConsultaDto;
 import com.proyecto.backjava.dto.CorrespondenciaCreateRequest;
+import com.proyecto.backjava.dto.HistorialConsultaDto;
+import com.proyecto.backjava.dto.TransferenciaConsultaDto;
 import com.proyecto.backjava.dto.TransferenciaRequest;
 import com.proyecto.backjava.entity.*;
 import com.proyecto.backjava.repository.*;
@@ -29,7 +34,7 @@ public class CorrespondenciaService {
     private final HistorialEventoRepository historialEventoRepository;
 
     @Transactional
-    public Correspondencia crear(User usuario, CorrespondenciaCreateRequest request) {
+    public CorrespondenciaConsultaDto crear(User usuario, CorrespondenciaCreateRequest request) {
         if (request.getSedeId() == null || request.getAreaId() == null || request.getModalidad() == null || request.getContieneCorrespondencia() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sedeId, areaId, modalidad y contieneCorrespondencia son obligatorios");
         }
@@ -50,7 +55,7 @@ public class CorrespondenciaService {
         if (request.getUsuarioAsignadoId() != null) {
             User asignado = userRepository.findById(request.getUsuarioAsignadoId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario asignado no existe"));
-            if (!Boolean.TRUE.equals(asignado.getActivo())) {
+            if (!asignado.isEnabled()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario asignado no existe o está inactivo");
             }
         }
@@ -113,26 +118,42 @@ public class CorrespondenciaService {
                     .build());
         }
 
-        return correspondenciaRepository.findById(created.getId()).orElse(created);
+        return mapear(correspondenciaRepository.findById(created.getId()).orElse(created));
     }
 
-    public List<Correspondencia> inventario(User usuario) {
+    public CorrespondenciaConsultaDto consultar(String id, User usuario) {
+        return mapear(buscarPermitida(id, usuario));
+    }
+
+    public List<CorrespondenciaConsultaDto> inventario(User usuario) {
         if (Roles.USUARIO.equals(usuario.getRol())) {
-            return correspondenciaRepository.findAllByOrderByCreatedAtDesc().stream()
-                    .filter(c -> usuario.getId().equals(c.getUsuarioAsignadoId()))
-                    .toList();
+            return correspondenciaRepository.findAllByUsuarioAsignadoIdOrderByFechaCreacionDesc(usuario.getId())
+                    .stream().map(this::mapear).toList();
         }
-        return correspondenciaRepository.findAllByOrderByCreatedAtDesc();
+        return correspondenciaRepository.findAllByOrderByFechaCreacionDesc().stream().map(this::mapear).toList();
     }
 
     @Transactional
-    public Correspondencia recibir(String id, User usuario) {
-        Correspondencia registro = correspondenciaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Correspondencia no encontrada"));
-
-        if (Roles.USUARIO.equals(usuario.getRol()) && !usuario.getId().equals(registro.getUsuarioAsignadoId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes recibir correspondencia asignada a ti");
+    public CorrespondenciaConsultaDto actualizar(String id, CorrespondenciaActualizarRequest request, User usuario) {
+        Correspondencia registro = buscarPermitida(id, usuario);
+        if (request.getNombreDocumento() != null) {
+            registro.setNombreDocumento(request.getNombreDocumento().trim());
         }
+        if (request.getDestino() != null) {
+            registro.setDestino(request.getDestino().trim());
+        }
+        if (request.getPersonaEntrega() != null) {
+            registro.setPersonaEntrega(request.getPersonaEntrega().trim());
+        }
+        if (request.getObservacion() != null) {
+            registro.setObservacion(request.getObservacion().trim());
+        }
+        return mapear(correspondenciaRepository.save(registro));
+    }
+
+    @Transactional
+    public CorrespondenciaConsultaDto recibir(String id, User usuario) {
+        Correspondencia registro = buscarPermitida(id, usuario);
 
         registro.setEstado(EstadosCorrespondencia.RECIBIDA);
         registro.setRecibidaPorId(usuario.getId());
@@ -148,27 +169,22 @@ public class CorrespondenciaService {
                 .fecha(LocalDateTime.now())
                 .build());
 
-        return correspondenciaRepository.findById(id).orElse(registro);
+        return mapear(correspondenciaRepository.findById(id).orElse(registro));
     }
 
     @Transactional
-    public Correspondencia transferir(String id, User usuario, TransferenciaRequest request) {
+    public CorrespondenciaConsultaDto transferir(String id, User usuario, TransferenciaRequest request) {
         if (request.getUsuarioDestinoId() == null || request.getUsuarioDestinoId().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "usuarioDestinoId es obligatorio");
         }
 
-        Correspondencia registro = correspondenciaRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Correspondencia no encontrada"));
+        Correspondencia registro = buscarPermitida(id, usuario);
 
         User destino = userRepository.findById(request.getUsuarioDestinoId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario destino no existe"));
 
-        if (!Boolean.TRUE.equals(destino.getActivo())) {
+        if (!destino.isEnabled()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario destino no existe o está inactivo");
-        }
-
-        if (Roles.USUARIO.equals(usuario.getRol()) && !usuario.getId().equals(registro.getUsuarioAsignadoId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes transferir correspondencia que tienes asignada");
         }
 
         registro.setUsuarioAsignadoId(destino.getId());
@@ -193,13 +209,107 @@ public class CorrespondenciaService {
                 .fecha(LocalDateTime.now())
                 .build());
 
-        return correspondenciaRepository.findById(id).orElse(registro);
+        return mapear(correspondenciaRepository.findById(id).orElse(registro));
     }
 
-    public List<HistorialEvento> historial(User usuario) {
-        if (Roles.ADMINISTRADOR.equals(usuario.getRol()) || Roles.CORRESPONDENCIA.equals(usuario.getRol())) {
-            return historialEventoRepository.findAll();
+    public List<HistorialConsultaDto> historial(User usuario) {
+        List<HistorialEvento> eventos = Roles.ADMINISTRADOR.equals(usuario.getRol())
+                ? historialEventoRepository.findAll()
+                : historialEventoRepository.findByUsuarioIdOrderByFechaDesc(usuario.getId());
+        return eventos.stream().map(evento -> HistorialConsultaDto.builder()
+                .id(evento.getId())
+                .correspondenciaId(evento.getCorrespondenciaId())
+                .usuarioId(evento.getUsuarioId())
+                .tipo(evento.getTipo())
+                .detalle(evento.getDetalle())
+                .fecha(evento.getFecha())
+                .build()).toList();
+    }
+
+    public List<TransferenciaConsultaDto> transferencias(User usuario) {
+        List<Transferencia> transferencias = Roles.ADMINISTRADOR.equals(usuario.getRol())
+                ? transferenciaRepository.findAllByOrderByFechaDesc()
+                : transferenciaRepository.findByUsuarioParticipanteOrderByFechaDesc(usuario.getId());
+        return transferencias.stream().map(transferencia -> TransferenciaConsultaDto.builder()
+                .id(transferencia.getId())
+                .correspondenciaId(transferencia.getCorrespondenciaId())
+                .deUsuarioId(transferencia.getDeUsuarioId())
+                .aUsuarioId(transferencia.getAUsuarioId())
+                .fecha(transferencia.getFecha())
+                .comentario(transferencia.getComentario())
+                .build()).toList();
+    }
+
+    public HistorialConsultaDto consultarEvento(String id, User usuario) {
+        HistorialEvento evento = historialEventoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Evento no encontrado"));
+        if (Roles.USUARIO.equals(usuario.getRol()) && !usuario.getId().equals(evento.getUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes consultar eventos registrados por ti");
         }
-        return historialEventoRepository.findByUsuarioIdOrderByFechaDesc(usuario.getId());
+        return HistorialConsultaDto.builder()
+                .id(evento.getId())
+                .correspondenciaId(evento.getCorrespondenciaId())
+                .usuarioId(evento.getUsuarioId())
+                .tipo(evento.getTipo())
+                .detalle(evento.getDetalle())
+                .fecha(evento.getFecha())
+                .build();
+    }
+
+    public TransferenciaConsultaDto consultarTransferencia(String id, User usuario) {
+        Transferencia transferencia = transferenciaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transferencia no encontrada"));
+        if (Roles.USUARIO.equals(usuario.getRol())
+                && !usuario.getId().equals(transferencia.getDeUsuarioId())
+                && !usuario.getId().equals(transferencia.getAUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes consultar esta transferencia");
+        }
+        return TransferenciaConsultaDto.builder()
+                .id(transferencia.getId())
+                .correspondenciaId(transferencia.getCorrespondenciaId())
+                .deUsuarioId(transferencia.getDeUsuarioId())
+                .aUsuarioId(transferencia.getAUsuarioId())
+                .fecha(transferencia.getFecha())
+                .comentario(transferencia.getComentario())
+                .build();
+    }
+
+    private Correspondencia buscarPermitida(String id, User usuario) {
+        Correspondencia registro = correspondenciaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Correspondencia no encontrada"));
+        if (Roles.USUARIO.equals(usuario.getRol()) && !usuario.getId().equals(registro.getUsuarioAsignadoId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes acceder a correspondencia asignada a ti");
+        }
+        return registro;
+    }
+
+    private CorrespondenciaConsultaDto mapear(Correspondencia registro) {
+        return CorrespondenciaConsultaDto.builder()
+                .id(registro.getId())
+                .recorridoId(registro.getRecorridoId())
+                .creadoPorId(registro.getCreadoPorId())
+                .usuarioAsignadoId(registro.getUsuarioAsignadoId())
+                .recibidaPorId(registro.getRecibidaPorId())
+                .numeroDocumento(registro.getNumeroDocumento())
+                .contieneCorrespondencia(registro.getContieneCorrespondencia())
+                .nombreDocumento(registro.getNombreDocumento())
+                .destino(registro.getDestino())
+                .personaEntrega(registro.getPersonaEntrega())
+                .observacion(registro.getObservacion())
+                .estado(registro.getEstado())
+                .fechaRecepcion(registro.getFechaRecepcion())
+                .fechaEntrega(registro.getFechaEntrega())
+                .fechaCreacion(registro.getFechaCreacion())
+                .fechaActualizacion(registro.getFechaActualizacion())
+                .archivos(registro.getArchivos().stream().map(archivo -> ArchivoConsultaDto.builder()
+                        .id(archivo.getId())
+                        .correspondenciaId(archivo.getCorrespondenciaId())
+                        .nombre(archivo.getNombre())
+                        .url(archivo.getUrl())
+                        .tipo(archivo.getTipo())
+                        .fechaCreacion(archivo.getFechaCreacion())
+                        .fechaActualizacion(archivo.getFechaActualizacion())
+                        .build()).toList())
+                .build();
     }
 }

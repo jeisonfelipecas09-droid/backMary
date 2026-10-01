@@ -23,7 +23,7 @@ public class JwtService {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject(user.getCorreoElectronico())
                 .claim("id", user.getId())
                 .claim("rol", user.getRol())
                 .issuedAt(now)
